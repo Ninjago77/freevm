@@ -54,14 +54,19 @@ def get_ssh_command(API_KEY:str) -> str:
 
 def main(name:str,API_KEY:str,AUTHTOKEN:str):
     port = generate_free_port()
-    start_ngrok_tunnel(port=port,AUTHTOKEN=AUTHTOKEN)
+    thread = start_ngrok_tunnel(port=port,AUTHTOKEN=AUTHTOKEN)
     create_container(port=port,name=name)
     ssh_cmd = get_ssh_command(API_KEY=API_KEY)
-    return ssh_cmd
+    return ssh_cmd,thread,name
 
-print(main(
-    name="sup_raj", # here is the vms name
-    API_KEY=steamninja77_at_gmail_dot_com_API_KEY,
-    AUTHTOKEN=steamninja77_at_gmail_dot_com_AUTHTOKEN, # password is pass1234
-))
-#dsdssdsdssd
+try:
+    ssh_cmd,thread,name = main(
+        name="sup_raj",
+        API_KEY=steamninja77_at_gmail_dot_com_API_KEY,
+        AUTHTOKEN=steamninja77_at_gmail_dot_com_AUTHTOKEN,
+    )
+    print(ssh_cmd)
+except KeyboardInterrupt:
+    # thread.join()
+    delete_container(name)
+
