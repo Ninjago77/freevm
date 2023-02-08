@@ -5,6 +5,22 @@ docker_image = "freevm:latest"
 steamninja77_at_gmail_dot_com_AUTHTOKEN = "2LPuB8ubpvx1OdIo1Rt9iqjhIUt_5gXEPS9LtmTMShYaJJYGx"
 steamninja77_at_gmail_dot_com_API_KEY = "2LSV3llU08Iliz33uygx1dnFvwg_5AiT9qDcbCu2Tci5CgsBr"
 
+def convert_str_to_snake_case(text:str) -> str:
+    text = text.lower().replace(" ","_")
+    for symbol in list("!\"#$%&'()*+,-./:;<=>?@[\]^`{|}~"):
+        text = text.replace(symbol,"_symbol_")
+    for number,number_string in zip(range(10),["zero","one","two","three","four","five","six","seven","eight","nine"]):
+        text = text.replace(str(number),f"_{number_string}_")
+    text = "".join([char for char in text if char in "abcdefghijklmnopqrstuvwxyz_"])
+    while text[-1] == "_":
+        text = text[0:-1]
+    while text[0] == "_":
+        text = text[1:]
+    while "__" in text:
+        text = text.replace("__","_")
+    return text
+    
+
 def generate_free_port() -> int:
     sock = socket.socket()
     sock.bind(('', 0))
@@ -52,7 +68,8 @@ def get_ssh_command(API_KEY:str) -> str:
 
     return ssh_cmd
 
-def main(name:str,API_KEY:str,AUTHTOKEN:str):
+def main(name:str,API_KEY:str,AUTHTOKEN:str) -> list[str,threading.Thread,str]:
+    name = convert_str_to_snake_case(text=name)
     port = generate_free_port()
     thread = start_ngrok_tunnel(port=port,AUTHTOKEN=AUTHTOKEN)
     create_container(port=port,name=name)
@@ -61,12 +78,12 @@ def main(name:str,API_KEY:str,AUTHTOKEN:str):
 
 try:
     ssh_cmd,thread,name = main(
-        name="sup_raj",
+        name="kishore_comp",
         API_KEY=steamninja77_at_gmail_dot_com_API_KEY,
         AUTHTOKEN=steamninja77_at_gmail_dot_com_AUTHTOKEN,
     )
     print(ssh_cmd)
 except KeyboardInterrupt:
-    # thread.join()
+    thread.join()
     delete_container(name)
 
