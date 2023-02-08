@@ -13,19 +13,25 @@ def generate_free_port() -> int:
     del sock
     return port
 
-def create_container(port:int,name:str) -> None:
-    
-    cmds = [
-        f"\"C:\Program Files\Docker\Docker\\resources\\bin\docker.exe\" kill {name}",
-        f"\"C:\Program Files\Docker\Docker\\resources\\bin\docker.exe\" rm {name}",
-
-        f"\"C:\Program Files\Docker\Docker\\resources\\bin\docker.exe\" run --env=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin -p {port}:22 --label='org.opencontainers.image.ref.name=ubuntu' --label='org.opencontainers.image.version=22.04' --runtime=runc --name={name} -d {docker_image}",
+def delete_container(name:str) -> None:
+    [
+        subprocess.run(cmd,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+        for cmd in [
+            f"\"C:\Program Files\Docker\Docker\\resources\\bin\docker.exe\" kill {name}",
+            f"\"C:\Program Files\Docker\Docker\\resources\\bin\docker.exe\" rm {name}",
+        ]
     ]
-    [subprocess.run(cmd,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL) for cmd in cmds]
 
-def start_ngrok_tunnel(port:int,AUTHTOKEN:str) -> None:
+def create_container(port:int,name:str) -> None:
+    delete_container(name=name)
+    cmd = f"\"C:\Program Files\Docker\Docker\\resources\\bin\docker.exe\" run --env=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin -p {port}:22 --label='org.opencontainers.image.ref.name=ubuntu' --label='org.opencontainers.image.version=22.04' --runtime=runc --name={name} -d {docker_image}"
+    subprocess.run(cmd,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+
+def start_ngrok_tunnel(port:int,AUTHTOKEN:str) -> threading.Thread:
     cmd = f'C:/ngrok tcp {port} --region="in" --authtoken="{AUTHTOKEN}"'
-    threading.Thread(target=lambda:subprocess.run(cmd,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL),args=()).start()
+    thread = threading.Thread(target=lambda:subprocess.run(cmd,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL),args=())
+    thread.start()
+    return thread
 
 def get_ssh_command(API_KEY:str) -> str:
     url = "https://api.ngrok.com/tunnels"
@@ -54,7 +60,7 @@ def main(name:str,API_KEY:str,AUTHTOKEN:str):
     return ssh_cmd
 
 print(main(
-    name="uuh_bruh",
+    name="sup_raj", # here is the vms name
     API_KEY=steamninja77_at_gmail_dot_com_API_KEY,
-    AUTHTOKEN=steamninja77_at_gmail_dot_com_AUTHTOKEN,
+    AUTHTOKEN=steamninja77_at_gmail_dot_com_AUTHTOKEN, # password is pass1234
 ))
