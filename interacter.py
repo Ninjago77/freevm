@@ -78,7 +78,7 @@ def main(name:str,API_KEY:str,AUTHTOKEN:str) -> list[str,threading.Thread,str]:
 
 try:
     ssh_cmd,thread,name = main(
-        name="kishore_comp",
+        name="slash_test",
         API_KEY=steamninja77_at_gmail_dot_com_API_KEY,
         AUTHTOKEN=steamninja77_at_gmail_dot_com_AUTHTOKEN,
     )
