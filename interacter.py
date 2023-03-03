@@ -1,10 +1,10 @@
-import socket,subprocess,requests,re,threading
+import socket,subprocess,requests,re,threading,docker
 
-global docker_image,prefix
+global docker_image,prefix,client
 prefix = "koala"
 docker_image = "freevm:latest"
-steamninja77_at_gmail_dot_com_AUTHTOKEN = "2LPuB8ubpvx1OdIo1Rt9iqjhIUt_5gXEPS9LtmTMShYaJJYGx"
-steamninja77_at_gmail_dot_com_API_KEY = "2LSV3llU08Iliz33uygx1dnFvwg_5AiT9qDcbCu2Tci5CgsBr"
+client = docker.from_env()
+
 
 def convert_str_to_snake_case_and_add_prefix(text:str) -> str:
     text = text.lower().replace(" ","_")
@@ -24,69 +24,35 @@ def convert_str_to_snake_case_and_add_prefix(text:str) -> str:
     return text
     
 
-def generate_free_port() -> int:
-    sock = socket.socket()
-    sock.bind(('', 0))
-    port = sock.getsockname()[1]
-    sock.close()
-    del sock
-    return port
-
 def delete_container(name:str) -> None:
-    [
-        subprocess.run(cmd,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
-        for cmd in [
-            f"\"C:\Program Files\Docker\Docker\\resources\\bin\docker.exe\" kill {name}",
-            f"\"C:\Program Files\Docker\Docker\\resources\\bin\docker.exe\" rm {name}",
-        ]
-    ]
+    try:
+        container = client.containers.get(name)
+    except docker.errors.NotFound as e:
+        return None
+    else:    
+        container.kill()
+        container.rm()
 
-def create_container(port:int,name:str) -> None:
+def create_container(name:str,ssh_j_host:str) -> None:
     delete_container(name=name)
-    cmd = f"\"C:\Program Files\Docker\Docker\\resources\\bin\docker.exe\" run -p {port}:22 --label='org.opencontainers.image.ref.name=ubuntu' --name={name} -d {docker_image}"
-    subprocess.run(cmd,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
+    client.containers.run(image=docker_image,name=name,detach=True,command=f"/ssh-j.com.sh {ssh_j_host}")
 
-def start_ngrok_tunnel(port:int,AUTHTOKEN:str) -> threading.Thread:
-    cmd = f'C:/ngrok tcp {port} --region="in" --authtoken="{AUTHTOKEN}"'
-    thread = threading.Thread(target=lambda:subprocess.run(cmd,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL),args=())
-    thread.start()
-    return thread
-
-def get_ssh_command(API_KEY:str) -> str:
-    url = "https://api.ngrok.com/tunnels"
-    headers = {
-        "Authorization":f"Bearer {API_KEY}",
-        "Ngrok-Version":"2",
-    }
-    response = requests.get(url=url,headers=headers).json()
-
-    tunnels = response["tunnels"]
-    tunnel = tunnels[0]
-    public_url = tunnel["public_url"]
-
-    match = re.match(r"^tcp://(?P<host>\d+\.tcp\.\w+\.ngrok\.io):(?P<port>\d+)$",public_url)
-    host,port = match.group("host"),match.group("port")
-
-    ssh_cmd = f"ssh koala@{host} -p {port}"
-
+def get_ssh_command(name:str,ssh_j_host:str) -> str:
+    ssh_cmd = f"ssh -J {ssh_j_host}@ssh-j.com koala@{client.containers.get(name).short_id}"
     return ssh_cmd
 
-def main(name:str,API_KEY:str,AUTHTOKEN:str) -> list[str,threading.Thread,str]:
+def main(name:str,ssh_j_host:str):
     name = convert_str_to_snake_case_and_add_prefix(text=name)
-    port = generate_free_port()
-    thread = start_ngrok_tunnel(port=port,AUTHTOKEN=AUTHTOKEN)
-    create_container(port=port,name=name)
-    ssh_cmd = get_ssh_command(API_KEY=API_KEY)
-    return ssh_cmd,thread,name
+    create_container(name=name,ssh_j_host=ssh_j_host)
+    ssh_cmd = get_ssh_command(name=name,ssh_j_host=ssh_j_host)
+    return ssh_cmd,name
 
 try:
-    ssh_cmd,thread,name = main(
+    ssh_cmd,name = main(
         name="testit",
-        API_KEY=steamninja77_at_gmail_dot_com_API_KEY,
-        AUTHTOKEN=steamninja77_at_gmail_dot_com_AUTHTOKEN,
+        ssh_j_host="bruh",
     )
     print(ssh_cmd)
 except KeyboardInterrupt:
-    # thread.join()
     delete_container(name)
 
